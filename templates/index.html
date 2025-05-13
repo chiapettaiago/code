@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://cdnjs.cloudflare.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; worker-src blob:;">
+    <title>IDE Online - C</title>
+    <link rel="stylesheet" data-name="vs/editor/editor.main" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.1/min/vs/editor/editor.main.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.1/min/vs/loader.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #007acc;
+            --secondary-color: #0e639c;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --background-dark: #1e1e1e;
+            --background-darker: #252526;
+            --text-color: #cccccc;
+            --border-color: #333;
+            --hover-color: #1177bb;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+            background-color: var(--background-dark);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Estilos do Container de Autenticação */
+        #auth-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+        }
+
+        .auth-form {
+            background: var(--background-darker);
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            margin: 1rem;
+        }
+
+        .auth-form h2 {
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .auth-form input {
+            width: 100%;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--background-dark);
+            color: var(--text-color);
+            font-size: 1rem;
+        }
+
+        .auth-form button {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .auth-form button:hover {
+            background: var(--hover-color);
+        }
+
+        .auth-form p {
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        .auth-form a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .auth-form a:hover {
+            text-decoration: underline;
+        }
+
+        /* Estilos do Container Principal */
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .toolbar {
+            background-color: var(--background-darker);
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .toolbar button {
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            height: 36px;
+            transition: all 0.2s;
+        }
+
+        .toolbar button i {
+            font-size: 1.1em;
+        }
+
+        .new-button {
+            background-color: var(--secondary-color);
+        }
+
+        .run-button {
+            background-color: var(--success-color);
+        }
+
+        .download-button {
+            background-color: #6c757d;
+        }
+
+        /* Área de Arquivos */
+        .files-sidebar {
+            width: 240px;
+            background: #232323;
+            border-right: 1px solid var(--border-color);
+            padding: 1rem 0;
+            overflow-y: auto;
+        }
+
+        .files-header {
+            padding: 0 1rem;
+            margin-bottom: 1rem;
+            color: #fff;
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        #file-list {
+            list-style: none;
+        }
+
+        #file-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            color: var(--text-color);
+            transition: background-color 0.2s;
+        }
+
+        #file-list li:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        #file-list li .delete-button {
+            display: none;
+            background: var(--error-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 0.25rem 0.5rem;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+
+        #file-list li:hover .delete-button {
+            display: inline-block;
+        }
+
+        #file-list li.active {
+            background-color: rgba(0, 122, 204, 0.2);
+            color: #fff;
+        }
+
+        /* Editor e Output */
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #editor {
+            flex: 1;
+            border: none;
+        }
+
+        .output-container {
+            height: 200px;
+            display: flex;
+            flex-direction: column;
+            background: var(--background-dark);
+        }
+
+        .output-header {
+            background-color: var(--background-darker);
+            padding: 0.5rem 1rem;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        #output {
+            flex: 1;
+            padding: 1rem;
+            font-family: 'Consolas', 'Courier New', monospace;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            background: var(--background-dark);
+            color: var(--text-color);
+        }
+
+        /* Barra de Status */
+        .status-bar {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 0.25rem 1rem;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Diálogo de Novo Arquivo */
+        .dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 999;
+        }
+
+        .dialog {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--background-darker);
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 400px;
+            z-index: 1000;
+            display: none;
+        }
+
+        .dialog.show {
+            display: block;
+        }
+
+        .dialog-overlay.show {
+            display: block;
+        }
+
+        .dialog h3 {
+            margin: 0 0 1rem 0;
+            color: var(--text-color);
+        }
+
+        .dialog input {
+            width: 100%;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--background-dark);
+            color: var(--text-color);
+            font-size: 1rem;
+        }
+
+        .dialog-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+        }
+
+        /* Notificações */
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 0.875rem;
+            z-index: 9999;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .notification.success {
+            background-color: var(--success-color);
+        }
+
+        .notification.error {
+            background-color: var(--error-color);
+        }
+
+        .notification.info {
+            background-color: var(--primary-color);
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .files-sidebar {
+                width: 200px;
+            }
+
+            .toolbar {
+                flex-wrap: wrap;
+            }
+
+            .toolbar button {
+                flex: 1;
+                min-width: 120px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .files-sidebar {
+                width: 100%;
+                height: auto;
+                max-height: 200px;
+            }
+
+            .main-content {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="auth-container">
+        <div id="login-form" class="auth-form" style="display:none">
+            <h2>Login</h2>
+            <input type="text" id="login-username" placeholder="Usuário" autocomplete="username">
+            <input type="password" id="login-password" placeholder="Senha" autocomplete="current-password">
+            <button type="button" onclick="login()">Entrar</button>
+            <p>Não tem conta? <a href="#" onclick="showRegister()">Cadastre-se</a></p>
+            <div id="login-error" style="color: var(--error-color); margin-top: 1rem; text-align: center;"></div>
+        </div>
+        <div id="register-form" class="auth-form" style="display:none">
+            <h2>Cadastro</h2>
+            <input type="text" id="register-username" placeholder="Usuário" autocomplete="username">
+            <input type="password" id="register-password" placeholder="Senha" autocomplete="new-password">
+            <button type="button" onclick="register()">Cadastrar</button>
+            <p>Já tem conta? <a href="#" onclick="showLogin()">Entrar</a></p>
+            <div id="register-error" style="color: var(--error-color); margin-top: 1rem; text-align: center;"></div>
+        </div>
+    </div>
+
+    <div class="container" id="main-app" style="display:none">
+        <div id="editor-loading" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); padding: 20px; border-radius: 8px; z-index: 1000;">
+            Carregando editor...
+        </div>
+        <div class="toolbar">
+            <button class="new-button" onclick="showNewFileDialog()">
+                <i>+</i> Novo Arquivo
+            </button>
+            <select id="language-select" onchange="changeLanguage()" style="padding: 0.5rem; background: var(--background-dark); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 4px;">
+                <option value="c">C</option>
+                <option value="python">Python</option>
+            </select>
+            <button class="run-button" onclick="runCode()">
+                <i>▶</i> Executar
+            </button>
+            <button class="download-button" onclick="downloadCode()">
+                <i>⬇</i> Baixar
+            </button>
+            <button onclick="logout()">
+                <i>↪</i> Sair
+            </button>
+        </div>
+        <div class="main-content">
+            <div class="files-sidebar">
+                <div class="files-header">Seus Arquivos</div>
+                <ul id="file-list"></ul>
+            </div>
+            <div class="editor-container">
+                <div id="editor"></div>
+                <div class="output-container">
+                    <div class="output-header">Console de Saída</div>
+                    <div id="output"></div>
+                </div>
+            </div>
+        </div>
+        <div class="status-bar">
+            <span>Linguagem: C</span>
+            <span>UTF-8</span>
+        </div>
+    </div>
+
+    <div class="dialog-overlay" id="overlay"></div>
+    <div class="dialog" id="newFileDialog">
+        <h3>Novo Arquivo</h3>
+        <input type="text" id="filename" placeholder="Nome do arquivo (ex: programa.c)">
+        <div class="dialog-buttons">
+            <button onclick="cancelNewFile()">Cancelar</button>
+            <button class="new-button" onclick="createNewFile()">Criar</button>
+        </div>
+    </div>
+
+    <script>
+        let currentFilename = 'codigo.c';
+        let currentFileId = null;
+        let saveTimeout = null;
+        let editorReady = false;
+        let currentLanguage = 'c';
+
+        // Função para mudar a linguagem
+        function changeLanguage() {
+            const select = document.getElementById('language-select');
+            currentLanguage = select.value;
+            
+            if (window.editor) {
+                const model = window.editor.getModel();
+                if (model) {
+                    monaco.editor.setModelLanguage(model, currentLanguage);
+                }
+            }
+            
+            // Atualiza a barra de status
+            document.querySelector('.status-bar span:first-child').textContent = 
+                `Linguagem: ${currentLanguage.toUpperCase()}`;
+        }
+
+        function getDefaultExtension() {
+            return currentLanguage === 'python' ? '.py' : '.c';
+        }
+
+        function showLoading() {
+            document.getElementById('editor-loading').style.display = 'block';
+        }
+
+        function hideLoading() {
+            document.getElementById('editor-loading').style.display = 'none';
+        }
+
+        // Auto-save
+        function autoSave() {
+            if (saveTimeout) {
+                clearTimeout(saveTimeout);
+            }
+            saveTimeout = setTimeout(saveFile, 1000);
+        }
+
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.1/min/vs' } });
+
+        showLoading();
+        require(['vs/editor/editor.main'], function () {
+            try {
+                const editorElement = document.getElementById('editor');
+                if (!editorElement) {
+                    console.error('Elemento #editor não encontrado. Verifique o HTML.');
+                    return;
+                }
+
+                // Configurações otimizadas do editor
+                window.editor = monaco.editor.create(editorElement, {
+                    value: window.pendingEditorValue !== undefined ? window.pendingEditorValue : '',
+                    language: 'c',
+                    theme: 'vs-dark',
+                    fontSize: 14,
+                    minimap: {
+                        enabled: false
+                    },
+                    automaticLayout: true,
+                    scrollBeyondLastLine: false,
+                    renderWhitespace: 'none',
+                    rulers: [80],
+                    bracketPairColorization: {
+                        enabled: true
+                    },
+                    wordWrap: 'on',
+                    folding: false,
+                    contextmenu: false,
+                    lightbulb: {
+                        enabled: false
+                    },
+                    links: false,
+                    occurrencesHighlight: false,
+                    renderLineHighlight: 'none',
+                    roundedSelection: false,
+                    lineNumbers: 'on',
+                    scrollbar: {
+                        vertical: 'visible',
+                        horizontal: 'visible',
+                        verticalScrollbarSize: 10,
+                        horizontalScrollbarSize: 10,
+                        alwaysConsumeMouseWheel: false
+                    },
+                    // Configurações de fim de linha
+                    eol: '\n',
+                    largeFileOptimizations: true,
+                    trimAutoWhitespace: true,
+                    // Manter apenas uma quebra de linha no final
+                    formatOnPaste: true,
+                    formatOnType: true
+                });
+
+                // Limpa o editor quando não estiver em uso
+                window.addEventListener('blur', function() {
+                    if (window.editor && typeof window.editor.getModel === 'function') {
+                        const model = window.editor.getModel();
+                        if (model) {
+                            monaco.editor.getModels().forEach(model => {
+                                if (model !== window.editor.getModel()) {
+                                    model.dispose();
+                                }
+                            });
+                        }
+                    }
+                });
+
+                // Marca o editor como pronto
+                editorReady = true;
+
+                // Limpa o valor pendente após inicializar
+                if (window.pendingEditorValue !== undefined) {
+                    delete window.pendingEditorValue;
+                }
+
+                window.editor.onDidChangeModelContent(() => {
+                    autoSave();
+                });
+
+                window.editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_S, () => {
+                    saveFile();
+                });
+
+                hideLoading();
+            } catch (error) {
+                console.error('Erro ao inicializar o editor:', error);
+                hideLoading();
+                showNotification('Erro ao inicializar o editor. Por favor, recarregue a página.', 'error');
+            }
+        }, function (err) {
+            console.error('Erro ao carregar o Monaco Editor:', err);
+            hideLoading();
+            showNotification('Erro ao carregar o editor. Por favor, recarregue a página.', 'error');
+        });
+
+        // Função auxiliar para obter o conteúdo do editor com segurança
+        function getEditorContent() {
+            if (editorReady && window.editor && typeof window.editor.getValue === 'function') {
+                return window.editor.getValue();
+            }
+            return window.pendingEditorValue || '';
+        }
+
+        // Função auxiliar para definir o conteúdo do editor com segurança
+        function setEditorContent(content) {
+            if (editorReady && window.editor && typeof window.editor.setValue === 'function') {
+                window.editor.setValue(content);
+            } else {
+                window.pendingEditorValue = content;
+            }
+        }
+
+        function runCode() {
+            const code = getEditorContent();
+            const outputDiv = document.getElementById('output');
+            outputDiv.innerText = 'Executando...\n';
+            
+            fetch('/run', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    code,
+                    filename: currentFilename
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                outputDiv.innerText = data.output || 'Programa executado com sucesso!';
+            })
+            .catch(error => {
+                outputDiv.innerText = 'Erro: ' + error;
+            });
+        }
+
+        function downloadCode() {
+            if (!currentFileId) {
+                alert('Nenhum arquivo aberto para baixar!');
+                return;
+            }
+            fetch('/download', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ file_id: currentFileId })
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = currentFilename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+            })
+            .catch(error => {
+                document.getElementById('output').innerText = 'Erro ao baixar: ' + error;
+            });
+        }
+
+        function showNewFileDialog() {
+            document.getElementById('overlay').classList.add('show');
+            document.getElementById('newFileDialog').classList.add('show');
+            document.getElementById('filename').focus();
+        }
+
+        function cancelNewFile() {
+            document.getElementById('overlay').classList.remove('show');
+            document.getElementById('newFileDialog').classList.remove('show');
+            document.getElementById('filename').value = '';
+        }
+
+        function createNewFile() {
+            let filename = document.getElementById('filename').value.trim();
+            if (!filename) {
+                alert('Por favor, digite um nome para o arquivo');
+                return;
+            }
+
+            // Adiciona extensão apropriada se não houver
+            if (!filename.includes('.')) {
+                filename += getDefaultExtension();
+            }
+
+            fetch('/new_file', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename, language: currentLanguage })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentFilename = filename;
+                    currentFileId = data.file_id;
+                    // Se o editor estiver pronto, limpe-o. Caso contrário, armazene para uso posterior
+                    if (window.editor && typeof window.editor.setValue === 'function') {
+                        window.editor.setValue('');
+                    } else {
+                        window.pendingEditorValue = '';
+                    }
+                    cancelNewFile();
+                    loadFiles();
+                    saveFile();
+                } else {
+                    alert(data.error || 'Erro ao criar arquivo');
+                }
+            })
+            .catch(error => {
+                alert('Erro ao criar arquivo: ' + error);
+            });
+        }
+
+        function showLogin() {
+            document.getElementById('auth-container').style.display = '';
+            document.getElementById('login-form').style.display = '';
+            document.getElementById('register-form').style.display = 'none';
+            document.getElementById('main-app').style.display = 'none';
+        }
+
+        function showRegister() {
+            document.getElementById('auth-container').style.display = '';
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('register-form').style.display = '';
+            document.getElementById('main-app').style.display = 'none';
+        }
+
+        function showApp() {
+            document.getElementById('auth-container').style.display = 'none';
+            document.getElementById('main-app').style.display = '';
+        }
+
+        function login() {
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value;
+            fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showApp();
+                    loadFiles();
+                } else {
+                    document.getElementById('login-error').innerText = data.error || 'Erro ao fazer login';
+                }
+            });
+        }
+
+        function register() {
+            const username = document.getElementById('register-username').value.trim();
+            const password = document.getElementById('register-password').value;
+            fetch('/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showLogin();
+                } else {
+                    document.getElementById('register-error').innerText = data.error || 'Erro ao cadastrar';
+                }
+            });
+        }
+
+        function logout() {
+            fetch('/logout').then(() => {
+                showLogin();
+                window.editor.setValue('');
+                currentFileId = null;
+                currentFilename = 'codigo.c';
+            });
+        }
+
+        function loadFiles() {
+            fetch('/list_files').then(r => r.json()).then(data => {
+                const ul = document.getElementById('file-list');
+                ul.innerHTML = '';
+                if (!data.files || data.files.length === 0) {
+                    const li = document.createElement('li');
+                    li.style.color = '#aaa';
+                    li.style.textAlign = 'center';
+                    li.style.cursor = 'pointer';
+                    li.innerText = 'Nenhum arquivo encontrado. Clique aqui para criar um.';
+                    li.onclick = showNewFileDialog;
+                    ul.appendChild(li);
+                } else {
+                    data.files.forEach(f => {
+                        const li = document.createElement('li');
+                        li.style.cursor = 'pointer';
+
+                        const span = document.createElement('span');
+                        span.innerText = f.filename;
+                        span.onclick = () => openFile(f.id, f.filename);
+                        span.style.flex = '1';
+
+                        const deleteButton = document.createElement('button');
+                        deleteButton.innerText = 'Excluir';
+                        deleteButton.className = 'delete-button';
+                        deleteButton.onclick = (e) => {
+                            e.stopPropagation(); // Evita que o clique no botão acione o evento do span
+                            deleteFile(f.id);
+                        };
+
+                        li.appendChild(span);
+                        li.appendChild(deleteButton);
+                        ul.appendChild(li);
+                    });
+                }
+            });
+        }
+
+        function openFile(fileId, filename) {
+            fetch('/download', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ file_id: fileId })
+            })
+            .then(response => response.blob())
+            .then(blob => blob.text())
+            .then(text => {
+                // Remove possíveis quebras de linha extras no final do arquivo
+                text = text.replace(/\n+$/, '\n');
+                
+                // Atualiza o modelo do editor com o conteúdo limpo
+                if (window.editor) {
+                    const model = window.editor.getModel();
+                    if (model) {
+                        // Define a linguagem correta baseada na extensão do arquivo
+                        const ext = filename.toLowerCase();
+                        const lang = ext.endsWith('.py') ? 'python' : 'c';
+                        monaco.editor.setModelLanguage(model, lang);
+                    }
+                    window.editor.setValue(text);
+                }
+                
+                currentFileId = fileId;
+                currentFilename = filename;
+                
+                // Atualiza o seletor de linguagem
+                const langSelect = document.getElementById('language-select');
+                if (langSelect) {
+                    langSelect.value = filename.toLowerCase().endsWith('.py') ? 'python' : 'c';
+                    currentLanguage = langSelect.value;
+                }
+                
+                // Garante que o editor está editável
+                if (window.editor && typeof window.editor.updateOptions === 'function') {
+                    window.editor.updateOptions({ readOnly: false });
+                }
+            });
+        }
+
+        function saveFile() {
+            if (!currentFileId) {
+                showNotification('Nenhum arquivo aberto para salvar!', 'error');
+                return;
+            }
+            
+            // Obtém o conteúdo e normaliza as quebras de linha
+            let content = window.editor.getValue();
+            content = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            content = content.replace(/\n+$/, '\n');
+            
+            fetch('/save_file', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ file_id: currentFileId, content })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) {
+                    const errorMsg = data.error || 'Erro ao salvar arquivo';
+                    console.error(errorMsg);
+                    showNotification(errorMsg, 'error');
+                } else {
+                    showNotification('Arquivo salvo com sucesso!', 'success');
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao salvar:', error);
+                showNotification('Erro ao salvar arquivo', 'error');
+            });
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.textContent = message;
+            notification.style.position = 'fixed';
+            notification.style.bottom = '20px';
+            notification.style.right = '20px';
+            notification.style.padding = '10px 20px';
+            notification.style.borderRadius = '4px';
+            notification.style.color = '#fff';
+            notification.style.backgroundColor = type === 'error' ? '#dc3545' : 
+                                              type === 'success' ? '#28a745' : '#007bff';
+            notification.style.zIndex = '9999';
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        function deleteFile(fileId) {
+            if (!confirm('Tem certeza de que deseja excluir este arquivo?')) {
+                return;
+            }
+
+            fetch('/delete_file', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ file_id: fileId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadFiles();
+                    showNotification('Arquivo excluído com sucesso!', 'success');
+                } else {
+                    showNotification(data.error || 'Erro ao excluir arquivo.', 'error');
+                }
+            })
+            .catch(error => {
+                showNotification('Erro ao excluir arquivo: ' + error, 'error');
+            });
+        }
+
+        // Prevenção contra perda de dados
+        window.addEventListener('beforeunload', (e) => {
+            if (window.editor && window.editor.getValue()) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', function() {
+            fetch('/list_files').then(r => {
+                if (r.status === 401) {
+                    showLogin();
+                } else {
+                    showApp();
+                    loadFiles();
+                }
+            }).catch(() => {
+                // Caso ocorra um erro, exibe a tela de login por padrão
+                showLogin();
+            });
+        });
+    </script>
+</body>
+</html>
