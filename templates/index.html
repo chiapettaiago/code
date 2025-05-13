@@ -688,15 +688,22 @@
 
             fetch('/new_file', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
                 body: JSON.stringify({ filename, language: currentLanguage })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
                     currentFilename = filename;
                     currentFileId = data.file_id;
-                    // Se o editor estiver pronto, limpe-o. Caso contrário, armazene para uso posterior
                     if (window.editor && typeof window.editor.setValue === 'function') {
                         window.editor.setValue('');
                     } else {
@@ -710,7 +717,8 @@
                 }
             })
             .catch(error => {
-                alert('Erro ao criar arquivo: ' + error);
+                console.error('Erro ao criar arquivo:', error);
+                alert('Erro ao criar arquivo. Por favor, tente novamente.');
             });
         }
 

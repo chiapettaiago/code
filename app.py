@@ -362,22 +362,34 @@ def download_code():
 @app.route('/new_file', methods=['POST'])
 @login_required
 def new_file():
-    data = request.json
-    filename = data.get('filename')
-    if not filename:
-        return jsonify({'success': False, 'error': 'Nome do arquivo não fornecido'})
-    filename = os.path.basename(filename)
-    allowed_extensions = {'.c', '.h', '.cpp', '.hpp', '.py'}
-    _, ext = os.path.splitext(filename)
-    if ext not in allowed_extensions:
-        return jsonify({'success': False, 'error': 'Extensão não permitida. Use: .c, .h, .cpp, .hpp ou .py'})
-    # Verifica se o usuário já tem um arquivo com esse nome
-    if UserFile.query.filter_by(user_id=current_user.id, filename=filename).first():
-        return jsonify({'success': False, 'error': 'Arquivo já existe.'})
-    user_file = UserFile(filename=filename, content='', user_id=current_user.id)
-    db.session.add(user_file)
-    db.session.commit()
-    return jsonify({'success': True, 'file_id': user_file.id})
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'success': False, 'error': 'Dados JSON inválidos'}), 400
+            
+        filename = data.get('filename')
+        if not filename:
+            return jsonify({'success': False, 'error': 'Nome do arquivo não fornecido'})
+            
+        filename = os.path.basename(filename)
+        allowed_extensions = {'.c', '.h', '.cpp', '.hpp', '.py'}
+        _, ext = os.path.splitext(filename)
+        
+        if ext not in allowed_extensions:
+            return jsonify({'success': False, 'error': 'Extensão não permitida. Use: .c, .h, .cpp, .hpp ou .py'})
+            
+        # Verifica se o usuário já tem um arquivo com esse nome
+        if UserFile.query.filter_by(user_id=current_user.id, filename=filename).first():
+            return jsonify({'success': False, 'error': 'Arquivo já existe.'})
+            
+        user_file = UserFile(filename=filename, content='', user_id=current_user.id)
+        db.session.add(user_file)
+        db.session.commit()
+        return jsonify({'success': True, 'file_id': user_file.id})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/list_files', methods=['GET'])
 @login_required
