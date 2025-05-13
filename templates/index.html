@@ -744,12 +744,27 @@
         function login() {
             const username = document.getElementById('login-username').value.trim();
             const password = document.getElementById('login-password').value;
+            
+            if (!username || !password) {
+                document.getElementById('login-error').innerText = 'Usuário e senha são obrigatórios';
+                return;
+            }
+            
             fetch('/login', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                credentials: 'same-origin',
                 body: JSON.stringify({ username, password })
             })
-            .then(r => r.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
                     showApp();
@@ -757,6 +772,10 @@
                 } else {
                     document.getElementById('login-error').innerText = data.error || 'Erro ao fazer login';
                 }
+            })
+            .catch(error => {
+                document.getElementById('login-error').innerText = 'Erro ao fazer login. Tente novamente.';
+                console.error('Erro de login:', error);
             });
         }
 
@@ -788,7 +807,19 @@
         }
 
         function loadFiles() {
-            fetch('/list_files').then(r => r.json()).then(data => {
+            fetch('/list_files', {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json'
+                },
+                credentials: 'same-origin'
+            }).then(response => {
+                if (response.status === 401) {
+                    showLogin();
+                    throw new Error('Não autenticado');
+                }
+                return response.json();
+            }).then(data => {
                 const ul = document.getElementById('file-list');
                 ul.innerHTML = '';
                 if (!data.files || data.files.length === 0) {
@@ -813,7 +844,7 @@
                         deleteButton.innerText = 'Excluir';
                         deleteButton.className = 'delete-button';
                         deleteButton.onclick = (e) => {
-                            e.stopPropagation(); // Evita que o clique no botão acione o evento do span
+                            e.stopPropagation();
                             deleteFile(f.id);
                         };
 
@@ -821,6 +852,11 @@
                         li.appendChild(deleteButton);
                         ul.appendChild(li);
                     });
+                }
+            }).catch(error => {
+                console.error('Erro ao carregar arquivos:', error);
+                if (error.message !== 'Não autenticado') {
+                    showNotification('Erro ao carregar arquivos', 'error');
                 }
             });
         }
@@ -951,15 +987,20 @@
         });
 
         window.addEventListener('DOMContentLoaded', function() {
-            fetch('/list_files').then(r => {
-                if (r.status === 401) {
+            fetch('/list_files', {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json'
+                },
+                credentials: 'same-origin'
+            }).then(response => {
+                if (response.status === 401) {
                     showLogin();
-                } else {
-                    showApp();
-                    loadFiles();
+                    return;
                 }
+                showApp();
+                return response.json().then(data => loadFiles());
             }).catch(() => {
-                // Caso ocorra um erro, exibe a tela de login por padrão
                 showLogin();
             });
         });

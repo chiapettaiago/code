@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_file, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_file, send_from_directory, make_response
 import subprocess
 import os
 import tempfile
@@ -53,6 +53,21 @@ def validate_password(password):
 def validate_json():
     if request.method in ['POST', 'PUT'] and request.content_type != 'application/json':
         return jsonify({'success': False, 'error': 'Content-Type deve ser application/json'}), 415
+
+@app.errorhandler(401)
+def unauthorized(e):
+    return jsonify({'success': False, 'error': 'Autenticação necessária'}), 401
+
+@app.errorhandler(405)
+def method_not_allowed(e):
+    return jsonify({'success': False, 'error': 'Método não permitido'}), 405
+
+@app.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        response = make_response()
+        response.headers.add('Access-Control-Allow-Methods', ['GET', 'POST'])
+        return response
 
 @app.route('/register', methods=['POST'])
 def register():
