@@ -255,50 +255,58 @@ finally:
             exe_file = None
             
             try:
-                with tempfile.NamedTemporaryFile(suffix=ext, delete=False, mode='w', encoding='utf-8') as f:
-                    # Código para C/C++ com proteções
-                    restricted_code = """
-#include <stdio.h>
+                with tempfile.NamedTemporaryFile(suffix=ext, delete=False, mode='w', encoding='utf-8', newline='\n') as f:
+                    # Template otimizado para C/C++
+                    restricted_code = """#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <time.h>
 #ifdef __linux__
 #include <sys/resource.h>
+#include <signal.h>
 #endif
 
-// Proteção contra timeout
-volatile int __timeout = 0;
+// Handler de timeout e limites
+static volatile int __timeout_flag = 0;
+static const size_t __MEMORY_LIMIT = 50 * 1024 * 1024;  // 50MB
+static size_t __total_allocated = 0;
+
+#ifdef __linux__
 void __timeout_handler(int sig) {
-    __timeout = 1;
+    (void)sig;  // Evita warning de parâmetro não usado
+    fprintf(stderr, "Erro: Tempo limite excedido\\n");
     exit(1);
 }
+#endif
 
-// Proteção contra alocação excessiva de memória
-void* __check_malloc(size_t size) {
-    static size_t total_memory = 0;
-    const size_t memory_limit = 50 * 1024 * 1024; // 50MB
+// Função segura de alocação de memória
+void* __safe_malloc(size_t size) {
+    if (size == 0) return NULL;
     
-    if (size > memory_limit || total_memory + size > memory_limit) {
-        fprintf(stderr, "Erro: Limite de memória excedido\n");
+    // Verifica limite de memória total
+    if (size > __MEMORY_LIMIT || __total_allocated + size > __MEMORY_LIMIT) {
+        fprintf(stderr, "Erro: Limite de memória excedido\\n");
         exit(1);
     }
     
+    // Tenta alocar memória
     void* ptr = malloc(size);
-    if (ptr == NULL) {
-        fprintf(stderr, "Erro: Falha na alocação de memória\n");
+    if (!ptr) {
+        fprintf(stderr, "Erro: Falha na alocação de memória\\n");
         exit(1);
     }
     
-    total_memory += size;
+    __total_allocated += size;
     return ptr;
 }
 
-#define malloc(size) __check_malloc(size)
+// Define malloc para usar nossa versão segura
+#define malloc(size) __safe_malloc(size)
 
-// Código do usuário
-%s
-""" % code
+// Código do usuário começa aqui
+%s""" % code
+
                     f.write(restricted_code)
                     temp_file = f.name
 
