@@ -18,8 +18,7 @@ instance_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instan
 if not os.path.exists(instance_path):
     os.makedirs(instance_path)
 
-# Configurar o caminho do banco de dados
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(instance_path, "ide.db")}'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://code:JkaEFChEctAwJYKN@191.252.100.132:3306/code'
 
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limite de 16MB para uploads
 db = SQLAlchemy(app)
@@ -113,6 +112,10 @@ def login():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/login', methods=['GET'])
+def login_page():
+    return render_template('index.html')
+
 @app.route('/logout')
 @login_required
 def logout():
@@ -120,6 +123,7 @@ def logout():
     return jsonify({'success': True})
 
 @app.route('/')
+@login_required
 def index():
     return render_template('index.html')
 
@@ -274,13 +278,13 @@ void* __check_malloc(size_t size) {
     const size_t memory_limit = 50 * 1024 * 1024; // 50MB
     
     if (size > memory_limit || total_memory + size > memory_limit) {
-        fprintf(stderr, "Erro: Limite de memória excedido\\n");
+        fprintf(stderr, "Erro: Limite de memória excedido\n");
         exit(1);
     }
     
     void* ptr = malloc(size);
     if (ptr == NULL) {
-        fprintf(stderr, "Erro: Falha na alocação de memória\\n");
+        fprintf(stderr, "Erro: Falha na alocação de memória\n");
         exit(1);
     }
     
