@@ -222,7 +222,7 @@ finally:
             # Executa o código Python com timeout e ambiente configurado
             try:
                 run_result = subprocess.run(
-                    ['python', '-E', temp_file],  # -E desabilita variáveis de ambiente PYTHON*
+                    ['python3', '-E', temp_file],  # Usar python3 para compatibilidade Linux
                     capture_output=True,
                     text=True,
                     timeout=5,
