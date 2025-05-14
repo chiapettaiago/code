@@ -7,6 +7,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 import re
 from flask_cors import CORS
+import sys
 
 # Certifique-se de que o diretório de templates está configurado corretamente
 app = Flask(__name__, template_folder='templates')
@@ -161,6 +162,7 @@ def run_code():
             return jsonify({'output': f'Erro: Uso de função não permitida: {keyword}'})
     
     try:
+        python_cmd = 'python3' if sys.platform != 'win32' else 'python'
         if language == 'python':
             # Configura variáveis de ambiente para o Python
             env = os.environ.copy()
@@ -170,7 +172,7 @@ def run_code():
             # Verifica se o Python está disponível
             try:
                 python_version = subprocess.run(
-                    ['python', '--version'],
+                    [python_cmd, '--version'],
                     capture_output=True,
                     text=True,
                     timeout=5,
@@ -222,7 +224,7 @@ finally:
             # Executa o código Python com timeout e ambiente configurado
             try:
                 run_result = subprocess.run(
-                    ['python3', '-E', temp_file],  # Usar python3 para compatibilidade Linux
+                    [python_cmd, '-E', temp_file],  # Usar python3 para compatibilidade Linux
                     capture_output=True,
                     text=True,
                     timeout=5,
