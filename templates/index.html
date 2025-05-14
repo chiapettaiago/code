@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://cdnjs.cloudflare.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; worker-src blob:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://cdnjs.cloudflare.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com data:; worker-src blob:;">
     <title>IDE Online - C</title>
     <link rel="stylesheet" data-name="vs/editor/editor.main" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.1/min/vs/editor/editor.main.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.1/min/vs/loader.min.js"></script>
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
         :root {
             --primary-color: #007acc;
@@ -410,20 +412,20 @@
         </div>
         <div class="toolbar">
             <button class="new-button" onclick="showNewFileDialog()">
-                <i>+</i> Novo Arquivo
+                <i class="fa-solid fa-file" style="color: #1b1c1d;"></i>
             </button>
             <select id="language-select" onchange="changeLanguage()" style="padding: 0.5rem; background: var(--background-dark); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 4px;">
                 <option value="c">C</option>
                 <option value="python">Python</option>
             </select>
             <button class="run-button" onclick="runCode()">
-                <i>▶</i> Executar
+                <i class="fa-solid fa-play"></i>
             </button>
             <button class="download-button" onclick="downloadCode()">
-                <i>⬇</i> Baixar
+                <i class="fa-solid fa-download"></i>
             </button>
             <button onclick="logout()">
-                <i>↪</i> Sair
+                <i class="fa-solid fa-right-from-bracket"></i>
             </button>
         </div>
         <div class="main-content">
@@ -454,6 +456,8 @@
             <button class="new-button" onclick="createNewFile()">Criar</button>
         </div>
     </div>
+
+    <!-- Removido o script do kit Font Awesome duplicado -->
 
     <script>
         let currentFilename = 'codigo.c';
