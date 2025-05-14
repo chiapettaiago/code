@@ -6,9 +6,11 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 import re
+from flask_cors import CORS
 
 # Certifique-se de que o diretório de templates está configurado corretamente
 app = Flask(__name__, template_folder='templates')
+CORS(app, supports_credentials=True)
 app.config['SECRET_KEY'] = 'sua_chave_secreta_aqui'  
 
 # Criar diretório instance se não existir
@@ -48,11 +50,23 @@ def validate_username(username):
 def validate_password(password):
     return len(password) >= 8
 
-# Certifique-se de que todas as rotas que recebem JSON verificam o cabeçalho Content-Type
 @app.before_request
-def validate_json():
+def before_request():
+    if request.method == "OPTIONS":
+        response = make_response()
+        response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
+        return response
     if request.method in ['POST', 'PUT'] and request.content_type != 'application/json':
         return jsonify({'success': False, 'error': 'Content-Type deve ser application/json'}), 415
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 @app.errorhandler(401)
 def unauthorized(e):
@@ -61,13 +75,6 @@ def unauthorized(e):
 @app.errorhandler(405)
 def method_not_allowed(e):
     return jsonify({'success': False, 'error': 'Método não permitido'}), 405
-
-@app.before_request
-def handle_preflight():
-    if request.method == "OPTIONS":
-        response = make_response()
-        response.headers.add('Access-Control-Allow-Methods', ['GET', 'POST'])
-        return response
 
 @app.route('/register', methods=['POST'])
 def register():
