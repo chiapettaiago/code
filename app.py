@@ -132,6 +132,7 @@ def index():
 def run_code():
     code = request.json.get('code', '')
     filename = request.json.get('filename', '')
+    user_input = request.json.get('input', '')  # Parâmetro para input do usuário
     
     # Melhor detecção de linguagem
     python_extensions = {'.py', '.pyw'}
@@ -168,6 +169,8 @@ def run_code():
             env = os.environ.copy()
             env['PYTHONHASHSEED'] = '0'  # Desabilita hash randomization
             env['PYTHONIOENCODING'] = 'utf-8'
+            env['LC_ALL'] = 'C.UTF-8'
+            env['LANG'] = 'C.UTF-8'
             
             # Verifica se o Python está disponível
             try:
@@ -176,7 +179,9 @@ def run_code():
                     capture_output=True,
                     text=True,
                     timeout=5,
-                    env=env
+                    env=env,
+                    encoding='utf-8',
+                    errors='replace'
                 )
                 if python_version.returncode != 0:
                     return jsonify({'output': 'Erro: Python não está instalado ou acessível'})
@@ -194,11 +199,27 @@ from typing import *
 import io
 import traceback
 
-# Redireciona stdout para capturar a saída
+# Redireciona stdout e stdin para capturar a saída e entrada
 stdout = io.StringIO()
 stderr = io.StringIO()
 sys.stdout = stdout
 sys.stderr = stderr
+
+# Simula input do usuário
+class InputSimulator:
+    def __init__(self, input_text):
+        self.input_text = input_text
+        self.input_lines = input_text.split('\\n')
+        self.current_line = 0
+
+    def readline(self):
+        if self.current_line < len(self.input_lines):
+            line = self.input_lines[self.current_line]
+            self.current_line += 1
+            return line + '\\n'
+        return '\\n'
+
+sys.stdin = InputSimulator('''%s''')
 
 try:
     # Código do usuário
@@ -213,10 +234,9 @@ finally:
     output = stdout.getvalue()
     errors = stderr.getvalue()
     if errors:
-        print("=== ERROS ===")
         print(errors)
     print(output)
-""" % ('\n'.join('    ' + line for line in code.splitlines()))
+""" % (user_input, '\n'.join('    ' + line for line in code.splitlines()))
 
                 f.write(restricted_code)
                 temp_file = f.name
@@ -224,11 +244,13 @@ finally:
             # Executa o código Python com timeout e ambiente configurado
             try:
                 run_result = subprocess.run(
-                    [python_cmd, '-E', temp_file],  # Usar python3 para compatibilidade Linux
+                    [python_cmd, '-E', temp_file],
                     capture_output=True,
                     text=True,
-                    timeout=5,
-                    env=env
+                    timeout=15,  # Aumentado para 15 segundos
+                    env=env,
+                    encoding='utf-8',
+                    errors='replace'
                 )
                 
                 output = []
@@ -239,7 +261,7 @@ finally:
                     
                 return jsonify({'output': '\n'.join(output)})
             except subprocess.TimeoutExpired:
-                return jsonify({'output': 'Erro: Tempo de execução excedido (5 segundos)'})
+                return jsonify({'output': 'Erro: Tempo de execução excedido (15 segundos)'})
             except Exception as e:
                 return jsonify({'output': f'Erro na execução: {str(e)}'})
             finally:
@@ -334,7 +356,9 @@ void* __safe_malloc(size_t size) {
                     [compiler, temp_file, '-o', exe_file] + compiler_flags,
                     capture_output=True,
                     text=True,
-                    timeout=30
+                    timeout=30,
+                    encoding='utf-8',
+                    errors='replace'
                 )
 
                 if compile_result.returncode != 0:
@@ -346,15 +370,18 @@ void* __safe_malloc(size_t size) {
                         import resource
                         memory_limit = 50 * 1024 * 1024  # 50MB
                         resource.setrlimit(resource.RLIMIT_AS, (memory_limit, memory_limit))
-                        resource.setrlimit(resource.RLIMIT_CPU, (5, 5))
+                        resource.setrlimit(resource.RLIMIT_CPU, (10, 10))  # Aumentado para 10s
 
-                # Executar o código compilado com limites
+                # Executar o código compilado com limites e input do usuário
                 run_result = subprocess.run(
                     [exe_file],
                     capture_output=True,
                     text=True,
-                    timeout=5,
-                    preexec_fn=limit_resources if os.name != 'nt' else None
+                    timeout=15,  # Aumentado para 15 segundos
+                    preexec_fn=limit_resources if os.name != 'nt' else None,
+                    input=user_input,
+                    encoding='utf-8',
+                    errors='replace'
                 )
 
                 output = run_result.stdout
@@ -373,7 +400,7 @@ void* __safe_malloc(size_t size) {
                     pass
 
     except subprocess.TimeoutExpired:
-        return jsonify({'output': 'Erro: Tempo de execução excedido (5s)'})
+        return jsonify({'output': 'Erro: Tempo de execução excedido (15 segundos)'})
     except Exception as e:
         return jsonify({'output': f'Erro: {str(e)}'})
 

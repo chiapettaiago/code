@@ -9,6 +9,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.1/min/vs/loader.min.js"></script>
     <!-- Font Awesome CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
         :root {
             --primary-color: #007acc;
@@ -251,6 +252,10 @@
             white-space: pre-wrap;
             background: var(--background-dark);
             color: var(--text-color);
+            border: none;
+            resize: none;
+            width: 100%;
+            height: 100%;
         }
 
         /* Barra de Status */
@@ -418,7 +423,7 @@
                 <option value="c">C</option>
                 <option value="python">Python</option>
             </select>
-            <button class="run-button" onclick="runCode()">
+            <button class="run-button" onclick="startInteractiveRun()">
                 <i class="fa-solid fa-play"></i>
             </button>
             <button class="download-button" onclick="downloadCode()">
@@ -437,7 +442,11 @@
                 <div id="editor"></div>
                 <div class="output-container">
                     <div class="output-header">Console de Saída</div>
-                    <div id="output"></div>
+                    <textarea id="output"></textarea>
+                </div>
+                <div style="display: flex; border-top: 1px solid #333;">
+                    <textarea id="input-data" placeholder="Digite a entrada do programa aqui, uma linha para cada input/scanf..." style="flex:1; background: #232323; color: #fff; border: none; padding: 0.5rem; resize: vertical; min-height: 32px;"></textarea>
+                    <button onclick="sendInput()" style="background: var(--success-color); color: #fff; border: none; padding: 0.5rem 1rem;">Enviar Input</button>
                 </div>
             </div>
         </div>
@@ -457,14 +466,13 @@
         </div>
     </div>
 
-    <!-- Removido o script do kit Font Awesome duplicado -->
-
     <script>
         let currentFilename = 'codigo.c';
         let currentFileId = null;
         let saveTimeout = null;
         let editorReady = false;
         let currentLanguage = 'c';
+        let socket = null;
 
         // Função para mudar a linguagem
         function changeLanguage() {
@@ -616,28 +624,43 @@
             }
         }
 
-        function runCode() {
+        function startInteractiveRun() {
             const code = getEditorContent();
-            const outputDiv = document.getElementById('output');
-            outputDiv.innerText = 'Executando...\n';
+            const filename = currentFilename;
+            const userInput = document.getElementById('input-data').value;
+            document.getElementById('output').value = '';
             
+            // Envia o código e o input do usuário para execução
             fetch('/run', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    code,
-                    filename: currentFilename
+                    code: code, 
+                    filename: filename,
+                    input: userInput
                 })
             })
             .then(response => response.json())
             .then(data => {
-                outputDiv.innerText = data.output || 'Programa executado com sucesso!';
+                document.getElementById('output').value = data.output;
+                // Rolagem automática para o final do output
+                const outputEl = document.getElementById('output');
+                outputEl.scrollTop = outputEl.scrollHeight;
             })
             .catch(error => {
-                outputDiv.innerText = 'Erro: ' + error;
+                document.getElementById('output').value = 'Erro durante a execução: ' + error;
             });
+        }
+
+        function sendInput() {
+            const input = document.getElementById('input-data').value;
+            const output = document.getElementById('output');
+            
+            // Adiciona a entrada ao console de saída para visualização
+            output.value += "\n> " + input;
+            
+            // Executa o código novamente com a entrada fornecida
+            startInteractiveRun();
         }
 
         function downloadCode() {
